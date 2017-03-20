@@ -17,6 +17,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.grr.sunweather.MainActivity;
 import com.grr.sunweather.R;
 import com.grr.sunweather.activity.WeatherActivity;
 import com.grr.sunweather.db.City;
@@ -54,6 +55,8 @@ public class ChooseFragment extends Fragment {
     private ListView listView;
     private ArrayAdapter<String> adapter;
     private List<String> dataList = new ArrayList<>();
+
+    public String countyName;
     /**
      * 省列表
      */
@@ -105,11 +108,19 @@ public class ChooseFragment extends Fragment {
                     selectedCity = cityList.get(position);
                     queryCounties();
                 } else if (currentLevel == LEVEL_COUNTY) {
-                    String countyName = countyList.get(position).getCountyName();
-                    Intent intent = new Intent(getActivity(), WeatherActivity.class);
-                    intent.putExtra("county_name", countyName);
-                    startActivity(intent);
-                    getActivity().finish();
+                    countyName = countyList.get(position).getCountyName();
+                    if (getActivity() instanceof MainActivity) {
+                        Intent intent = new Intent(getActivity(), WeatherActivity.class);
+                        intent.putExtra("county_name", countyName);
+                        startActivity(intent);
+                        getActivity().finish();
+                    } else if (getActivity() instanceof WeatherActivity) {
+                        WeatherActivity activity = (WeatherActivity) getActivity();
+                        activity.drawerLayout.closeDrawers();
+                        activity.swipeRefresh.setRefreshing(true);
+                        activity.requestWeather(countyName);
+                    }
+
                 }
             }
         });

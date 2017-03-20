@@ -5,11 +5,16 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
 import android.preference.PreferenceManager;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -18,6 +23,7 @@ import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.grr.sunweather.R;
+import com.grr.sunweather.fragment.ChooseFragment;
 import com.grr.sunweather.gson.DailyForecast;
 import com.grr.sunweather.gson.Weather;
 import com.grr.sunweather.util.HttpUtil;
@@ -31,6 +37,11 @@ import okhttp3.Response;
 
 public class WeatherActivity extends AppCompatActivity {
 
+    private static final String TAG = "WeatherActivity";
+
+    private Button navButton;
+    public DrawerLayout drawerLayout;
+    public SwipeRefreshLayout swipeRefresh;
     private ImageView bingPicImg;
     private ScrollView weatherLayout;
     private TextView titleCity;
@@ -60,19 +71,42 @@ public class WeatherActivity extends AppCompatActivity {
         //初始化控件
         initView();
         String weatherString = prefs.getString("weather", null);
+        final String countyName;
         if (weatherString != null) {
             //有缓存时直接解析天气
             Weather weather = Utility.handleWeatherResponse(weatherString);
+            countyName = weather.basic.cityName;
             showWeatherInfo(weather);
         } else {
             //无缓存时去服务器查询天气
-            String countyName = getIntent().getStringExtra("county_name");
+            countyName = getIntent().getStringExtra("county_name");
             weatherLayout.setVisibility(View.INVISIBLE);
             requestWeather(countyName);
         }
+        swipeRefresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                ChooseFragment chooseFragment = (ChooseFragment) getSupportFragmentManager().findFragmentById(R.id.choose_area_fragment);
+                if (TextUtils.isEmpty(chooseFragment.countyName)) {
+                    requestWeather(countyName);
+                } else {
+                    requestWeather(chooseFragment.countyName);
+                }
+            }
+        });
     }
 
     private void initView() {
+        drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
+        navButton = (Button) findViewById(R.id.nav_button);
+        navButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                drawerLayout.openDrawer(GravityCompat.START);
+            }
+        });
+        swipeRefresh = (SwipeRefreshLayout) findViewById(R.id.swipe_refresh);
+        swipeRefresh.setColorSchemeResources(R.color.colorPrimary);
         bingPicImg = (ImageView) findViewById(R.id.bing_pic_img);
         weatherLayout = (ScrollView) findViewById(R.id.weather_layout);
         titleCity = (TextView) findViewById(R.id.title_city);
@@ -125,9 +159,20 @@ public class WeatherActivity extends AppCompatActivity {
             aqiText.setText(weather.aqi.aqiCity.aqi);
             pm25Text.setText(weather.aqi.aqiCity.pm25);
         }
-        String comfort = "舒适度:" + weather.suggestion.comfort.info;
-        String carWash = "洗车指数:" + weather.suggestion.carWash.info;
-        String sport = "运动建议:" + weather.suggestion.sport.info;
+        String comfort = "";
+        String carWash = "";
+        String sport = "";
+        if (weather.suggestion.comfort != null) {
+            if (!TextUtils.isEmpty(weather.suggestion.comfort.info)) {
+                comfort = "舒适度:" + weather.suggestion.comfort.info;
+            }
+            if (!TextUtils.isEmpty(weather.suggestion.comfort.info)) {
+                carWash = "洗车指数:" + weather.suggestion.carWash.info;
+            }
+            if (!TextUtils.isEmpty(weather.suggestion.comfort.info)) {
+                sport = "运动建议:" + weather.suggestion.sport.info;
+            }
+        }
         comfortText.setText(comfort);
         carWashText.setText(carWash);
         sportText.setText(sport);
@@ -139,7 +184,7 @@ public class WeatherActivity extends AppCompatActivity {
      *
      * @param countyName
      */
-    private void requestWeather(final String countyName) {
+    public void requestWeather(final String countyName) {
         String weatherUrl = "https://free-api.heweather.com/v5/weather/?city=" + countyName + "&key=852391803c4944869c8ae79d0b748d6d";
         HttpUtil.sendOKHttpRequest(weatherUrl, new Callback() {
             @Override
@@ -149,6 +194,7 @@ public class WeatherActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         Toast.makeText(WeatherActivity.this, "获取天气信息失败", Toast.LENGTH_SHORT).show();
+                        swipeRefresh.setRefreshing(false);
                     }
                 });
             }
@@ -168,6 +214,7 @@ public class WeatherActivity extends AppCompatActivity {
                         } else {
                             Toast.makeText(WeatherActivity.this, "获取天气信息失败", Toast.LENGTH_SHORT).show();
                         }
+                        swipeRefresh.setRefreshing(false);
                     }
                 });
             }
@@ -189,7 +236,6 @@ public class WeatherActivity extends AppCompatActivity {
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 final String bingPic = response.body().string();
-                Log.d("WeatherActivity===", "onResponse: " + bingPic);
                 SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(WeatherActivity.this).edit();
                 editor.putString("bing_pic", bingPic);
                 editor.apply();
