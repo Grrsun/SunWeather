@@ -2,6 +2,7 @@ package com.grr.sunweather.fragment;
 
 
 import android.app.ProgressDialog;
+import android.content.Intent;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -17,6 +18,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.grr.sunweather.R;
+import com.grr.sunweather.activity.WeatherActivity;
 import com.grr.sunweather.db.City;
 import com.grr.sunweather.db.County;
 import com.grr.sunweather.db.Province;
@@ -102,6 +104,12 @@ public class ChooseFragment extends Fragment {
                 } else if (currentLevel == LEVEL_CITY) {
                     selectedCity = cityList.get(position);
                     queryCounties();
+                } else if (currentLevel == LEVEL_COUNTY) {
+                    String countyName = countyList.get(position).getCountyName();
+                    Intent intent = new Intent(getActivity(), WeatherActivity.class);
+                    intent.putExtra("county_name", countyName);
+                    startActivity(intent);
+                    getActivity().finish();
                 }
             }
         });
@@ -206,7 +214,7 @@ public class ChooseFragment extends Fragment {
             @Override
             public void onResponse(Call call, Response response) throws IOException {
                 String responseText = response.body().string();
-                Log.d(TAG, "onResponse: "+responseText);
+                Log.d(TAG, "onResponse: " + responseText);
                 boolean result = false;
                 if ("province".equals(type)) {
                     result = Utility.handleProvinceResponse(responseText);
