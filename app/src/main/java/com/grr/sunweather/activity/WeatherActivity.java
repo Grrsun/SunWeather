@@ -1,6 +1,7 @@
 
 package com.grr.sunweather.activity;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
@@ -11,7 +12,6 @@ import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
@@ -26,6 +26,7 @@ import com.grr.sunweather.R;
 import com.grr.sunweather.fragment.ChooseFragment;
 import com.grr.sunweather.gson.DailyForecast;
 import com.grr.sunweather.gson.Weather;
+import com.grr.sunweather.service.AutoUpdateservice;
 import com.grr.sunweather.util.HttpUtil;
 import com.grr.sunweather.util.Utility;
 
@@ -207,6 +208,8 @@ public class WeatherActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         if (weather != null && "ok".equals(weather.status)) {
+                            Intent intent = new Intent(WeatherActivity.this, AutoUpdateservice.class);
+                            startService(intent);
                             SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(WeatherActivity.this).edit();
                             editor.putString("weather", responseText);
                             editor.apply();
